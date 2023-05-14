@@ -1,0 +1,77 @@
+# -*- coding: utf-8 -*-
+import numpy as np
+import matplotlib.pyplot as plt
+# Define your text data
+import pandas as pd
+
+
+# Load the Excel file
+df = pd.read_excel(r'C:\Users\82109\PycharmProjects\pythonProject\daegul_project.xlsx', sheet_name='22_fall')
+
+# Extract the text data from the "Text" column into a list
+text_data = df['제목'].tolist()
+print(text_data)
+#text_data = [['라쿤', '맨', '개강'], ['새'], ['행운', '까치'], ['어제', '이태원', '밤새', '이제'], ['혹시', '과외', '자료', '구', '때', '어려움', '분', '위해', '혹시', '도움', '제', '그동안', '자료', '구', '방법'], ['서울대', '카페', '정리', '리스트'], ['애', '나', '로또'], ['여기', '내', '공부'], ['허준', '교수', '축사', '전문'], ['관악산', '곰돌이'], ['인생', '경기'], ['티셔츠', '개꿀팁'], ['올해', '겨울', '날씨', '예측'], ['에타', '기능'], ['속기', '에바'], ['영어', '신문', '신문', '별', '난이도', '줌'], ['평행', '세계', '우리', '학교'], ['미래', '대해', '걱정', '필요', '것'], [], ['알', '아두', '한글', '단축키', '기능'], ['취한', '김', '학부', '생', '위', '와인', '법'], ['좌회전', '셔틀', '실시', '촉구', '운동'], ['마비', '계절', '요', '교수'], ['관정', '관', '분', '세시'], ['과외', '학생', '부모님', '질책'], ['정보', '구글', '드라이브', '파일', '원드라이브', '자동', '이전', '법'], ['연세대학교', '나무숲', '외침'], ['인과관계', '영어', '표현', '정리'], ['코딩', '공부', '시작', '비', '전공자', '위해'], [], ['허준', '교수'], ['사이버', '개강', '새'], ['관정', '폭포', '개장'], ['천식', '퀄리티', '요즘', '왜'], ['예술', '식사', '김민서', '얼른'], ['학생', '밥', '가지', '장난', '개'], ['생협', '이건', '좀'], ['비', '아무', '생각', '안'], ['낙성대', '주민', '혼밥', '여기저기', '가격', '비교', '곳', '군데', '소개'], ['친구', '커밍아웃'], ['사과', '마디', '응어리'], ['피해', '복구', '오전', '결과'], ['정보화', '본부', '개추'], ['토끼'], ['최고', '이', '사람', '이면', '개추'], ['코로나', '안', '사람'], ['서울대학교', '에브리', '타임'], ['무한급수', '증명', '법'], ['과외', '특'], ['뉴', '이티', '진짜', '쓰레기'], ['새내기', '위', '과외', '팁'], ['대학', '생활', '리셋'], ['호랑이', '새끼', '개'], ['내', '반중', '주의자', '추천', '좀'], ['어제', '위너', '기전'], ['새해', '맞이', '노션', '템플릿', '무료', '배포'], ['서울대', '생', '기본', '머리', '좀', '안'], ['실내', '마스크', '폐지', '사람', '개추'], ['공대', '선관위', '요청'], ['허준', '교수', '말'], ['대숲', '우영', '비판', '글'], ['서울대', '학우'], ['공대', '학생회', '선관위'], ['아버지', '위해', '지정', '헌혈'], ['공부'], ['초기', '스타트업', '투', '자금', '때', '생존', '위기', '구간', '일명', '데스', '밸리', '죽음', '계곡', '를']]
+
+
+# Define a function to calculate Euclidean distance between two vectors
+def euclidean_distance(v1, v2):
+    return np.sqrt(np.sum((v1 - v2) ** 2))
+
+# 주어진 text data의 각 sentence를 각 단어의 빈도를 vector로 하는 vector들로 만들기
+##########################################################
+# For each sentence in the text data:
+unique_words = []  # Initialize an empty list to store unique words
+for sentence in text_data:
+    # Convert the sentence to lowercase, replace commas with an empty string, and split it into a list of separate words
+    words_in_sentence = sentence.split()
+
+    # For each word in the sentence:
+    for word in words_in_sentence:
+        # If the word is not already in the list of unique words, add it to the list
+        if word not in unique_words:
+            unique_words.append(word)
+
+# Convert the list of unique words to a set to remove duplicates, then convert it back to a list
+vocab = list(set(unique_words))
+
+# Calculate the word frequencies for each text sample
+word_frequencies = []
+for sentence in text_data:
+    sentence_freqs = [0] * len(vocab) # 초기화
+    for word in sentence.split():
+        sentence_freqs[vocab.index(word)] += 1
+    word_frequencies.append(sentence_freqs)
+
+print(vocab)
+print(word_frequencies)
+# Generate some random data
+
+print(type(word_frequencies))
+
+X = np.array(word_frequencies)
+# Normalize the input data
+X_norm = (X - X.mean(axis=0)) / X.std(axis=0)
+
+# Calculate the covariance matrix
+covariance_matrix = np.cov(X_norm.T)
+
+# Calculate the eigenvectors and eigenvalues of the covariance matrix
+eigenvalues, eigenvectors = np.linalg.eig(covariance_matrix)
+
+# Sort the eigenvectors in descending order of eigenvalues
+sorted_indexes = eigenvalues.argsort()[::-1]
+eigenvectors = eigenvectors[:, sorted_indexes]
+
+# Calculate the percentage of variance explained by each principal component
+variance_explained = eigenvalues / np.sum(eigenvalues)
+
+# Transform the input data into the new coordinate system
+Z = X_norm.dot(eigenvectors[:, :2])
+
+# Plot the transformed data
+plt.scatter(Z[:, 0], Z[:, 1])
+plt.xlabel("PC1 ({:.2f}% variance explained)".format(np.abs(variance_explained[0]) * 100))
+plt.ylabel("PC2 ({:.2f}% variance explained)".format(np.abs(variance_explained[1]) * 100))
+
+plt.show()
