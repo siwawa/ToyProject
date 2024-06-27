@@ -1,0 +1,117 @@
+# 서울대학교 안전교육을 자동으로 틀어 놓고 전환해준다. 
+# 아이디와 비밀번호, 선택교육과 필수교육 중 뭘 들을 것인지를 입력하세요. 
+# 개선점: 서울대학교 안전교육 페이지가 아무 활동도 없이 오랜 시간 있다면(=긴 동영상 기다리는 도중) 로그인이 풀린다. 
+
+
+from selenium import webdriver 
+from selenium.webdriver.common.keys import Keys 
+from selenium.webdriver.common.by import By 
+from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import NoSuchElementException 
+import time 
+import pyautogui 
+
+chrome_options = Options()
+chrome_options.add_experimental_option("detach", True)
+# driver = webdriver.Chrome(options=chrome_options)
+
+driver = webdriver.Chrome()  
+driver.get('https://rsis.snu.ac.kr/login.do?code=-2&securityexceptionmsg=&page=') 
+driver.implicitly_wait(60) 
+
+
+def 로그인(): 
+    id = driver.find_element(By.CSS_SELECTOR,"#login_id") 
+    pw = driver.find_element(By.CSS_SELECTOR,"#login_pwd") 
+    btn_login = driver.find_element(By.CSS_SELECTOR,"#contents > div > div.login_inner > fieldset > input[type=submit]")
+    
+    id.click() 
+    id.send_keys("여기에 아이디를 입력하세요")
+    pw.click() 
+    pw.send_keys("여기에 비밀번호를 입력하세요") 
+    btn_login.click() 
+
+def 학습하러가기(교육): 
+    driver.implicitly_wait(10)  
+    메뉴 = driver.find_element(By.CSS_SELECTOR,"#showAllBtn") 
+    메뉴.click() 
+
+    메뉴_학습하기 = driver.find_element(By.CSS_SELECTOR,"#allMenu > li > ul:nth-child(2) > li > ul:nth-child(4) > li > a")  
+    메뉴_학습하기.click()  
+
+    안전환경_정기교육_24_1학기 = driver.find_element(By.CSS_SELECTOR,"#table_plan > tbody > tr:nth-child(2) > td.tleft.bdl") 
+    안전환경_정기교육_24_1학기.click()  
+
+
+    # 생명과학연구실습, 자연대 인턴십 모두 들어야 합니다. 
+    if 교육 == '필수교육': 
+        필수교육 = driver.find_element(By.CSS_SELECTOR,"#table_plan > tbody > tr:nth-child(3) > td.left > a ") 
+        필수교육.click() 
+        
+    # 자연대 인턴십의 경우 필수교육에 이어 선택교육까지 3시간 들어야 합니다. 
+    # 생명과학연구실습의 경우 선택교육을 듣지 않아도 됩니다. 
+    if 교육 == '선택교육': 
+        선택교육 = driver.find_element(By.CSS_SELECTOR,"#table_plan > tbody > tr:nth-child(2) > td.left > a ") 
+        선택교육.click() 
+
+    else: 
+        raise ValueError("필수교육/선택교육 안에서 적어주세요.")
+
+    
+
+
+##################################
+################################## 
+서울대_포털_ID로그인 = driver.find_element(By.CSS_SELECTOR,"#modal_background > div > span > span:nth-child(1) > div > a") 
+서울대_포털_ID로그인.click() 
+로그인()
+학습하러가기("선택교육")
+
+for linenum in range(3,99):  
+    try:
+        강의이름 = driver.find_element(By.CSS_SELECTOR,f"#table_plan > tbody > tr:nth-child({2*linenum+1}) > td.left").text
+        progress = float(driver.find_element(By.CSS_SELECTOR,f"#table_plan > tbody > tr:nth-child({2*linenum+1}) > td:nth-child(4) > div > div")\
+                               .get_attribute('data-percent'))
+         
+        if progress != 0 : 
+            # 이미 진행도가 채워진 강의는 듣지 않는다. 
+            print(f"진행도{progress}%로 스킵,{강의이름}")
+            pass 
+
+        else: 
+            # 진행도가 0%인 강의만 듣기 시작한다. 
+            print(f"진행도{progress}%로 진행,{강의이름}")
+            waited_min = 0 
+            driver.implicitly_wait(5)  
+            학습하기 = driver.find_element(By.CSS_SELECTOR,f"#table_plan > tbody > tr:nth-child({2*linenum+1}) > td:nth-child(5) > span") 
+            학습하기.click() 
+
+            # 강의 페이지 진입 
+            driver.switch_to.window(driver.window_handles[1]) 
+            driver.implicitly_wait(5)      
+            재생하기 = driver.find_element(By.CSS_SELECTOR,"#front-screen > div > div.vc-front-screen-btn-container > div.vc-front-screen-btn-wrapper.video1-btn > div")    
+            재생하기.click()
+
+            while 1: 
+                waited_min = waited_min + 1 
+                print(f"강의 끝날때까지 기다리는중.. {waited_min}분째 강의 듣는중")
+                time.sleep(60)  
+                element = driver.find_element(By.CSS_SELECTOR,"#play-controller > div > div > div.vc-pctrl-time-tracker > div.vc-pctrl-load-progress")\
+                                .get_attribute('style')
+                percentage = float(element.split()[1].split('%')[0].strip())  
+                if percentage == 100: 
+                    break 
+                if waited_min >= 50: 
+                    raise RuntimeError("너무 오래 기다려서 걍 끔;")
+            
+            pyautogui.press('enter') 
+            driver.close() 
+            driver.switch_to.window(driver.window_handles[0]) 
+
+
+    except NoSuchElementException: 
+        print("학습이 끝났습니다.")
+
+
+
+
